@@ -1,0 +1,69 @@
+stages:
+  - validate
+  - build
+  - deploy
+
+variables:
+  GCP_PROJECT_ID: ${{ values.gcp_project_id }}
+  GCP_REGION: ${{ values.gcp_region }}
+  IMAGE_NAME: gcr.io/${GCP_PROJECT_ID}/${{ values.component_id }}
+
+# Validate KRM manifests
+validate-infra:
+  stage: validate
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl apply --dry-run=client -f infra/
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# Build container image
+build-image:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    - echo ${GCP_SA_KEY} | docker login -u _json_key --password-stdin gcr.io
+  script:
+    - docker build -t ${IMAGE_NAME}:${CI_COMMIT_SHA} .
+    - docker tag ${IMAGE_NAME}:${CI_COMMIT_SHA} ${IMAGE_NAME}:latest
+    - docker push ${IMAGE_NAME}:${CI_COMMIT_SHA}
+    - docker push ${IMAGE_NAME}:latest
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# Deploy infrastructure (manual trigger)
+deploy-infra:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl apply -f infra/
+  environment:
+    name: ${{ values.environment }}
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# Deploy application to Cloud Run (optional)
+deploy-cloudrun:
+  stage: deploy
+  image: google/cloud-sdk:alpine
+  before_script:
+    - echo ${GCP_SA_KEY} | gcloud auth activate-service-account --key-file=-
+    - gcloud config set project ${GCP_PROJECT_ID}
+  script:
+    - |
+      gcloud run deploy ${{ values.component_id }} \
+        --image ${IMAGE_NAME}:${CI_COMMIT_SHA} \
+        --region ${GCP_REGION} \
+        --platform managed \
+        --allow-unauthenticated \
+        --service-account ${{ values.component_id }}-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+  environment:
+    name: ${{ values.environment }}
+    url: https://${{ values.component_id }}-${GCP_PROJECT_ID}.${GCP_REGION}.run.app
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
