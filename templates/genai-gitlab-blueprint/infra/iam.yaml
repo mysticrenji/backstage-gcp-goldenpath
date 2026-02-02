@@ -1,0 +1,29 @@
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMServiceAccount
+metadata:
+  name: ${{ values.component_id }}-sa
+spec:
+  displayName: "${{ values.component_id }} Service Account"
+---
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: ${{ values.component_id }}-storage-access
+spec:
+  member: serviceAccount:${{ values.component_id }}-sa@${{ values.gcp_project_id }}.iam.gserviceaccount.com
+  role: roles/storage.objectUser
+  resourceRef:
+    kind: StorageBucket
+    name: ${{ values.component_id }}-data
+---
+apiVersion: iam.cnrm.cloud.google.com/v1beta1
+kind: IAMPolicyMember
+metadata:
+  name: ${{ values.component_id }}-vertex-access
+spec:
+  member: serviceAccount:${{ values.component_id }}-sa@${{ values.gcp_project_id }}.iam.gserviceaccount.com
+  role: roles/aiplatform.user
+  resourceRef:
+    apiVersion: resourcemanager.cnrm.cloud.google.com/v1beta1
+    kind: Project
+    external: projects/${{ values.gcp_project_id }}

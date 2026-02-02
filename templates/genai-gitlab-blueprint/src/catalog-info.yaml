@@ -1,0 +1,33 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${{ values.component_id }}
+  description: ${{ values.description }}
+  annotations:
+    gitlab.com/project-slug: ${{ values.repoOwner }}/${{ values.component_id }}
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - genai
+    - vertex-ai
+    - python
+  links:
+    - url: https://console.cloud.google.com/vertex-ai?project=${{ values.gcp_project_id }}
+      title: Vertex AI Console
+      icon: cloud
+spec:
+  type: service
+  lifecycle: experimental
+  owner: ${{ values.owner }}
+  system: genai-platform
+  dependsOn:
+    - resource:${{ values.component_id }}-bucket
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ${{ values.component_id }}-bucket
+  description: Data storage bucket for ${{ values.component_id }}
+spec:
+  type: storage
+  owner: ${{ values.owner }}
+  system: genai-platform

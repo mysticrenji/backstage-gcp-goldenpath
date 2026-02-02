@@ -1,0 +1,9 @@
+apiVersion: serviceusage.cnrm.cloud.google.com/v1beta1
+kind: Service
+metadata:
+  name: aiplatform.googleapis.com
+  annotations:
+    cnrm.cloud.google.com/deletion-policy: "abandon"
+spec:
+  projectRef:
+    external: ${{ values.gcp_project_id }}
