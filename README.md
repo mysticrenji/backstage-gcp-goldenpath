@@ -18,14 +18,20 @@ For detailed architecture diagrams and component flows, see [docs/00-architectur
                           |  (Real Resources) |     |    Connector      |     |  (Kubernetes)     |
                           +-------------------+     +-------------------+     +-------------------+
 ```
-
-## What Gets Provisioned
-
 When a user executes the Golden Path:
 1. **Storage Bucket** - GCS bucket for data lake
 2. **Vertex AI API** - Enabled for the GCP project
 3. **Streamlit App** - Python GenAI chatbot skeleton
 4. **Catalog Entry** - Service registered in Backstage
+
+#### Backstage
+Backstage serves as the self-service portal where Data Scientists define their GenAI requirements through an intuitive UI form. It connects to GitLab to version control infrastructure and application code.
+
+![Backstage Platform](./img/backstage.png)
+
+#### Argocd
+![Argocd Platform](./img/argocd.png)
+
 
 ## Prerequisites
 
