@@ -120,6 +120,399 @@ lsof -ti:3000 | xargs kill -9
 PORT=3001 yarn dev
 ```
 
+## Step 1.6: Deploy Backstage to Kubernetes (GKE)
+
+Once Backstage is working locally, you can deploy it to GKE for production use.
+
+### Build the Docker Image
+
+Backstage ships with a multi-stage Dockerfile. Build and push to a container registry:
+
+```bash
+# Build the Backstage backend
+yarn build:backend
+
+# Build the Docker image
+docker image build . -f packages/backend/Dockerfile \
+  --tag gcr.io/${GCP_PROJECT_ID}/backstage:latest
+
+# Push to Google Container Registry
+docker push gcr.io/${GCP_PROJECT_ID}/backstage:latest
+```
+
+> **Tip**: If using Artifact Registry instead of GCR:
+> ```bash
+> docker tag gcr.io/${GCP_PROJECT_ID}/backstage:latest \
+>   europe-west1-docker.pkg.dev/${GCP_PROJECT_ID}/backstage/backstage:latest
+> docker push europe-west1-docker.pkg.dev/${GCP_PROJECT_ID}/backstage/backstage:latest
+> ```
+
+### Create a Kubernetes Namespace
+
+```bash
+kubectl create namespace backstage
+```
+
+### Create the GitLab Token Secret
+
+Store your GitLab PAT as a Kubernetes secret:
+
+```bash
+kubectl create secret generic backstage-secrets \
+  --namespace backstage \
+  --from-literal=GITLAB_TOKEN=${GITLAB_TOKEN}
+```
+
+### Create the PostgreSQL Database
+
+For production, use PostgreSQL instead of SQLite:
+
+```yaml
+# k8s/postgres.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: backstage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: backstage
+            - name: POSTGRES_USER
+              value: backstage
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+              subPath: data
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: backstage
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: backstage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+```
+
+Create the PostgreSQL password secret and apply:
+
+```bash
+kubectl create secret generic backstage-secrets \
+  --namespace backstage \
+  --from-literal=GITLAB_TOKEN=${GITLAB_TOKEN} \
+  --from-literal=POSTGRES_PASSWORD=$(openssl rand -base64 20) \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl apply -f k8s/postgres.yaml
+```
+
+### Create the Backstage Deployment
+
+```yaml
+# k8s/backstage.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backstage
+  namespace: backstage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backstage
+  template:
+    metadata:
+      labels:
+        app: backstage
+    spec:
+      serviceAccountName: backstage-sa
+      containers:
+        - name: backstage
+          image: gcr.io/${GCP_PROJECT_ID}/backstage:latest
+          ports:
+            - containerPort: 7007
+          env:
+            - name: GITLAB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: GITLAB_TOKEN
+            - name: POSTGRES_HOST
+              value: postgres.backstage.svc.cluster.local
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: backstage
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: POSTGRES_PASSWORD
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 7007
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 7007
+            initialDelaySeconds: 60
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backstage
+  namespace: backstage
+spec:
+  selector:
+    app: backstage
+  ports:
+    - port: 80
+      targetPort: 7007
+  type: ClusterIP
+```
+
+### Create Backstage Service Account (Workload Identity)
+
+If Backstage needs to access GCP resources directly:
+
+```yaml
+# k8s/backstage-sa.yaml
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backstage-sa
+  namespace: backstage
+  annotations:
+    iam.gke.io/gcp-service-account: backstage-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com
+```
+
+Set up the GCP side:
+
+```bash
+# Create GCP service account for Backstage
+gcloud iam service-accounts create backstage-sa \
+  --display-name="Backstage Service Account"
+
+# Bind Workload Identity
+gcloud iam service-accounts add-iam-policy-binding \
+  backstage-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com \
+  --member="serviceAccount:${GCP_PROJECT_ID}.svc.id.goog[backstage/backstage-sa]" \
+  --role="roles/iam.workloadIdentityUser"
+```
+
+### Update app-config.production.yaml
+
+Configure Backstage for production with PostgreSQL and the correct base URL:
+
+```yaml
+# app-config.production.yaml
+
+app:
+  baseUrl: http://backstage.example.com
+
+backend:
+  baseUrl: http://backstage.example.com
+  listen:
+    port: 7007
+  database:
+    client: pg
+    connection:
+      host: ${POSTGRES_HOST}
+      port: ${POSTGRES_PORT}
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
+
+integrations:
+  gitlab:
+    - host: gitlab.com
+      token: ${GITLAB_TOKEN}
+      apiBaseUrl: https://gitlab.com/api/v4
+```
+
+### Expose with Ingress (Optional)
+
+To access Backstage externally:
+
+```yaml
+# k8s/ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backstage
+  namespace: backstage
+  annotations:
+    kubernetes.io/ingress.class: gce
+spec:
+  rules:
+    - host: backstage.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backstage
+                port:
+                  number: 80
+```
+
+### Deploy Everything
+
+```bash
+# Apply all manifests
+kubectl apply -f k8s/backstage-sa.yaml
+kubectl apply -f k8s/postgres.yaml
+kubectl apply -f k8s/backstage.yaml
+
+# Wait for pods to be ready
+kubectl wait --namespace backstage \
+  --for=condition=Ready pod \
+  -l app=postgres \
+  --timeout=120s
+
+kubectl wait --namespace backstage \
+  --for=condition=Ready pod \
+  -l app=backstage \
+  --timeout=120s
+
+# Check status
+kubectl get pods -n backstage
+```
+
+### Verify the Deployment
+
+```bash
+# Check pod status
+kubectl get pods -n backstage
+
+# View logs
+kubectl logs -n backstage -l app=backstage -f
+
+# Port-forward for quick access (before setting up Ingress)
+kubectl port-forward -n backstage svc/backstage 7007:80
+```
+
+Open http://localhost:7007 to verify Backstage is running in GKE.
+
+### Kubernetes Deployment Summary
+
+```
+backstage namespace
+├── backstage-sa          (ServiceAccount with Workload Identity)
+├── backstage-secrets     (Secret: GITLAB_TOKEN, POSTGRES_PASSWORD)
+├── postgres              (Deployment + Service + PVC)
+├── backstage             (Deployment + Service)
+└── ingress (optional)    (External access)
+```
+
+## Troubleshooting
+
+### Error: GITLAB_TOKEN not set
+
+```bash
+# Verify the variable is set
+echo $GITLAB_TOKEN
+
+# If empty, set it again
+export GITLAB_TOKEN='glpat-YOUR_TOKEN'
+```
+
+### Error: Unable to connect to GitLab
+
+1. Verify your token has the correct scopes
+2. Check the `apiBaseUrl` in app-config.yaml
+3. For self-hosted GitLab, update `host` and `apiBaseUrl` accordingly
+
+### Port 3000 already in use
+
+```bash
+# Find and kill the process
+lsof -ti:3000 | xargs kill -9
+
+# Or use a different port
+PORT=3001 yarn dev
+```
+
+### Kubernetes: Backstage CrashLoopBackOff
+
+```bash
+# Check logs for errors
+kubectl logs -n backstage -l app=backstage --previous
+
+# Common causes:
+# 1. GITLAB_TOKEN secret missing - verify with:
+kubectl get secret backstage-secrets -n backstage -o yaml
+
+# 2. PostgreSQL not ready - check:
+kubectl get pods -n backstage -l app=postgres
+
+# 3. Wrong image - verify:
+kubectl describe deployment backstage -n backstage | grep Image
+```
+
+### Kubernetes: Cannot pull image
+
+```bash
+# If using GCR, ensure the node service account has access:
+gcloud projects add-iam-policy-binding ${GCP_PROJECT_ID} \
+  --member="serviceAccount:${GCP_PROJECT_ID}.svc.id.goog[backstage/backstage-sa]" \
+  --role="roles/artifactregistry.reader"
+```
+
 ## Next Step
 
 Proceed to [Phase 2: Blueprint Creation](03-blueprint-creation.md)
