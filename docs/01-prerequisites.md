@@ -2,8 +2,6 @@
 
 Before starting this tutorial, ensure you have all required tools and infrastructure configured.
 
-> **New to this project?** Start with the [Architecture Overview](00-architecture.md) to understand how Backstage, GitLab, ArgoCD, and GCP work together.
-
 ## A. Local Development Tools
 
 ### Node.js (v18 or v20 LTS)
@@ -177,60 +175,30 @@ kubectl version --short
 
 #### Configure Config Connector Service Account
 
-Config Connector needs a Google Cloud service account with permissions to create and manage resources. We use **Workload Identity** to securely link the Kubernetes service account to the GCP service account without managing keys.
-
-**Required IAM Roles:**
-
-| Role | Purpose |
-|------|---------|
-| `roles/storage.admin` | Create and manage GCS buckets |
-| `roles/aiplatform.admin` | Enable and manage Vertex AI resources |
-| `roles/serviceusage.serviceUsageAdmin` | Enable/disable GCP APIs |
-| `roles/iam.serviceAccountAdmin` | Create service accounts for workloads |
-| `roles/resourcemanager.projectIamAdmin` | Grant IAM roles to service accounts |
-
 ```bash
 # Create service account for Config Connector
 gcloud iam service-accounts create config-connector-sa \
   --display-name="Config Connector Service Account"
 
-# Grant required permissions for Config Connector to manage GCP resources
-
-# Storage - create and manage GCS buckets
+# Grant required permissions
 gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
   --member="serviceAccount:config-connector-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/storage.admin"
 
-# Vertex AI - enable and manage AI platform resources
 gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
   --member="serviceAccount:config-connector-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/aiplatform.admin"
 
-# Service Usage - enable/disable GCP APIs
 gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
   --member="serviceAccount:config-connector-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/serviceusage.serviceUsageAdmin"
 
-# IAM Service Account Admin - create service accounts for workloads
-gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
-  --member="serviceAccount:config-connector-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/iam.serviceAccountAdmin"
-
-# Project IAM Admin - manage IAM policies (grant roles to service accounts)
-gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
-  --member="serviceAccount:config-connector-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/resourcemanager.projectIamAdmin"
-
-# Bind Kubernetes service account to GCP service account (Workload Identity)
-# This allows the Config Connector pod to authenticate as the GCP service account
-# without needing to manage service account keys
+# Bind Kubernetes service account to GCP service account
 gcloud iam service-accounts add-iam-policy-binding \
   config-connector-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com \
   --member="serviceAccount:${GCP_PROJECT_ID}.svc.id.goog[cnrm-system/cnrm-controller-manager]" \
   --role="roles/iam.workloadIdentityUser"
 ```
-
-> **Workload Identity**: This is the recommended way to authenticate workloads to GCP from GKE. It eliminates the need to download and manage service account keys, provides automatic credential rotation, and follows the principle of least privilege. The binding above allows the Kubernetes service account `cnrm-controller-manager` in namespace `cnrm-system` to act as the GCP service account.
 
 #### Configure ConfigConnector Resource
 
@@ -255,6 +223,13 @@ kubectl wait -n cnrm-system \
   --timeout=300s
 ```
 
+#### Policy Controller
+```
+export CLUSTER_NAME="golden-path-cluster" 
+gcloud container clusters update $CLUSTER_NAME \                                                                                         
+    --enable-policy-controller \                                                                                                          
+    --location=europe-west1
+```
 ## C. Platform Credentials
 
 ### GitLab Personal Access Token (PAT)
