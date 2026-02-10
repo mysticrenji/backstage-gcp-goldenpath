@@ -2,6 +2,8 @@ apiVersion: iam.cnrm.cloud.google.com/v1beta1
 kind: IAMServiceAccount
 metadata:
   name: ${{ values.component_id }}-sa
+  annotations:
+    cnrm.cloud.google.com/project-id: ${{ values.gcp_project_id }}
 spec:
   displayName: "${{ values.component_id }} Service Account"
 ---
@@ -9,6 +11,8 @@ apiVersion: iam.cnrm.cloud.google.com/v1beta1
 kind: IAMPolicyMember
 metadata:
   name: ${{ values.component_id }}-storage-access
+  annotations:
+    cnrm.cloud.google.com/project-id: ${{ values.gcp_project_id }}
 spec:
   member: serviceAccount:${{ values.component_id }}-sa@${{ values.gcp_project_id }}.iam.gserviceaccount.com
   role: roles/storage.objectUser
@@ -20,6 +24,8 @@ apiVersion: iam.cnrm.cloud.google.com/v1beta1
 kind: IAMPolicyMember
 metadata:
   name: ${{ values.component_id }}-vertex-access
+  annotations:
+    cnrm.cloud.google.com/project-id: ${{ values.gcp_project_id }}
 spec:
   member: serviceAccount:${{ values.component_id }}-sa@${{ values.gcp_project_id }}.iam.gserviceaccount.com
   role: roles/aiplatform.user

@@ -21,7 +21,7 @@ This guide covers adding the following plugins to the Backstage Docker image:
 
 ## 1. Install Packages
 
-From the `genai-platform/` directory, install the frontend and backend packages:
+From the `backstage/` directory, install the frontend and backend packages:
 
 ```bash
 # Frontend packages
@@ -65,15 +65,18 @@ const backend = createBackend();
 // Core plugins
 backend.add(import('@backstage/plugin-app-backend'));
 backend.add(import('@backstage/plugin-proxy-backend'));
-backend.add(import('@backstage/plugin-scaffolder-backend'));
 backend.add(import('@backstage/plugin-techdocs-backend'));
 
-// Scaffolder modules
+// Scaffolder
+backend.add(import('@backstage/plugin-scaffolder-backend'));
 backend.add(import('@backstage/plugin-scaffolder-backend-module-gitlab'));
 
 // Catalog
 backend.add(import('@backstage/plugin-catalog-backend'));
-backend.add(import('@backstage/plugin-catalog-backend-module-scaffolder-entity-model'));
+backend.add(
+  import('@backstage/plugin-catalog-backend-module-scaffolder-entity-model'),
+);
+backend.add(import('@backstage/plugin-catalog-backend-module-logs'));
 
 // Auth
 backend.add(import('@backstage/plugin-auth-backend'));
@@ -81,7 +84,21 @@ backend.add(import('@backstage/plugin-auth-backend-module-guest-provider'));
 
 // Permission
 backend.add(import('@backstage/plugin-permission-backend'));
-backend.add(import('@backstage/plugin-permission-backend-module-allow-all-policy'));
+backend.add(
+  import('@backstage/plugin-permission-backend-module-allow-all-policy'),
+);
+
+// Search
+backend.add(import('@backstage/plugin-search-backend'));
+backend.add(import('@backstage/plugin-search-backend-module-catalog'));
+backend.add(import('@backstage/plugin-search-backend-module-techdocs'));
+
+// Kubernetes
+backend.add(import('@backstage/plugin-kubernetes-backend'));
+
+// Notifications & Signals
+backend.add(import('@backstage/plugin-notifications-backend'));
+backend.add(import('@backstage/plugin-signals-backend'));
 
 // Amazon ECS
 backend.add(import('@aws/amazon-ecs-plugin-for-backstage-backend'));
@@ -310,26 +327,25 @@ The AWS plugins use the [default AWS SDK credential chain](https://docs.aws.amaz
 The existing `Dockerfile` at `packages/backend/Dockerfile` handles everything. No changes to the Dockerfile are needed.
 
 ```bash
-cd genai-platform
+cd backstage
 
 # Install dependencies
 yarn install --immutable
 
-# Type-check
-yarn tsc
-
 # Build the backend (bundles frontend + backend)
+# NOTE: Do NOT run `yarn tsc` separately — some dependencies ship raw .ts files
+# that fail standalone type-checking. `yarn build:backend` handles compilation internally.
 yarn build:backend
 
 # Build the Docker image
 yarn build-image
 ```
 
-This produces an image tagged `backstage` locally. To push to a registry:
+This produces an image tagged `backstage` locally. Alternatively, use the helper script from the repo root:
 
 ```bash
-docker tag backstage <registry>/backstage:<version>
-docker push <registry>/backstage:<version>
+# Build and optionally push to GHCR
+./scripts/build-and-push.sh --push --latest
 ```
 
 Then update your Kubernetes deployment or Helm values to reference the new image tag.

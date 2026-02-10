@@ -86,15 +86,22 @@ spec:
       serviceAccountName: backstage-sa
       containers:
         - name: backstage
-          image: ghcr.io/mysticrenji/backstage:latest
+          image: ghcr.io/mysticrenji/backstage:v3
           ports:
             - containerPort: 7007
           env:
+            - name: BASE_URL
+              value: http://backstage.backstage.svc.cluster.local
             - name: GITLAB_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: backstage-secrets
                   key: GITLAB_TOKEN
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: GITHUB_TOKEN
             - name: POSTGRES_HOST
               value: postgres.backstage.svc.cluster.local
             - name: POSTGRES_PORT
@@ -106,6 +113,8 @@ spec:
                 secretKeyRef:
                   name: backstage-secrets
                   key: POSTGRES_PASSWORD
+            - name: NODE_OPTIONS
+              value: "--no-node-snapshot"
           resources:
             requests:
               cpu: 500m

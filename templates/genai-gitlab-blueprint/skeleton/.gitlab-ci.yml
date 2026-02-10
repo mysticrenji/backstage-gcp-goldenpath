@@ -27,7 +27,7 @@ build-image:
   before_script:
     - echo ${GCP_SA_KEY} | docker login -u _json_key --password-stdin gcr.io
   script:
-    - docker build -t ${IMAGE_NAME}:${CI_COMMIT_SHA} .
+    - docker build -f src/Dockerfile -t ${IMAGE_NAME}:${CI_COMMIT_SHA} .
     - docker tag ${IMAGE_NAME}:${CI_COMMIT_SHA} ${IMAGE_NAME}:latest
     - docker push ${IMAGE_NAME}:${CI_COMMIT_SHA}
     - docker push ${IMAGE_NAME}:latest

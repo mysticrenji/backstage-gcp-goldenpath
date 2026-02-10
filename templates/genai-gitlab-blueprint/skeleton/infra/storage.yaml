@@ -2,12 +2,14 @@ apiVersion: storage.cnrm.cloud.google.com/v1beta1
 kind: StorageBucket
 metadata:
   name: ${{ values.component_id }}-data
+  annotations:
+    cnrm.cloud.google.com/project-id: ${{ values.gcp_project_id }}
   labels:
     managed-by: backstage
     cost-center: ai-research
     environment: ${{ values.environment }}
 spec:
-  location: EU
+  location: ${{ values.gcp_region }}
   uniformBucketLevelAccess: true
   versioning:
     enabled: true
