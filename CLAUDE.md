@@ -209,6 +209,9 @@ yarn install --immutable && yarn build:backend
 - Templates use Jinja-style templating: `${{ parameters.projectName }}`
 - KRM YAML files must be valid Kubernetes manifests
 - Always include metadata annotations for Config Connector
+- The `publish:gitlab` scaffolder action does **not** support `allowedHosts` or `description`
+  input properties (those belong to `publish:github`). Using them causes an `InputError` at
+  runtime. Only pass supported inputs: `repoUrl`, `defaultBranch`, `repoVisibility`, etc.
 
 ### When Troubleshooting
 - Check kubeconfig context first: `kubectl config current-context`
@@ -269,6 +272,8 @@ A successful implementation enables:
 | GitLab integration failing | Verify `GITLAB_TOKEN` is set and has correct scopes |
 | Resource creation stuck | Check Config Connector logs: `kubectl logs -n cnrm-system` |
 | Context not found | Verify cluster exists: `gcloud container clusters list` |
+| `publish:gitlab` InputError (allowedHosts/description) | Remove unsupported properties; use only `repoUrl`, `defaultBranch`, `repoVisibility` |
+| GitHub 401 reading template from catalog | Add `GITHUB_TOKEN` to `backstage-secrets` K8s secret and restart the pod |
 
 ## Related Resources
 
@@ -287,6 +292,6 @@ A successful implementation enables:
 
 ---
 
-**Last Updated**: 2026-02-09
+**Last Updated**: 2026-02-10
 **Cluster Region**: europe-west1
 **GCP Project Pattern**: `project-*` or `${GCP_PROJECT_ID}`
