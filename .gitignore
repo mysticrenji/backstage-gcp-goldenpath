@@ -1,2 +1,29 @@
+# Environment / secrets
 .env
 *.env
+.env.*
+!.env.example
+
+# Downloaded archives and vendored operator bundles
+tar/
+*.tar.gz
+*.tgz
+
+# Node / Yarn
+node_modules/
+dist/
+dist-types/
+.yarn/install-state.gz
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code local settings
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
