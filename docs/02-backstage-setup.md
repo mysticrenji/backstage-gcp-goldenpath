@@ -129,7 +129,8 @@ Once Backstage is working locally, you can deploy it to GKE for production use.
 Backstage ships with a multi-stage Dockerfile. Build and push to a container registry:
 
 ```bash
-# Build the Backstage backend
+# Install dependencies and build the Backstage backend
+yarn install --immutable
 yarn build:backend
 
 # Build the Docker image
@@ -139,6 +140,13 @@ docker image build . -f packages/backend/Dockerfile \
 # Push to Google Container Registry
 docker push gcr.io/${GCP_PROJECT_ID}/backstage:latest
 ```
+
+> **Note**: Do not run `yarn tsc` as a standalone type-check step before building.
+> Some upstream dependencies (`@azure/msal-*`, `@rjsf/core`) ship raw `.ts` source
+> files that fail type-checking under the Backstage tsconfig. The `yarn build:backend`
+> command handles TypeScript compilation internally via `backstage-cli` and builds
+> successfully. You can also use the `scripts/build-and-push.sh` helper script to
+> automate the full build-and-push workflow.
 
 > **Tip**: If using Artifact Registry instead of GCR:
 > ```bash
@@ -269,7 +277,7 @@ spec:
       serviceAccountName: backstage-sa
       containers:
         - name: backstage
-          image: gcr.io/${GCP_PROJECT_ID}/backstage:latest
+          image: ghcr.io/mysticrenji/backstage:latest
           ports:
             - containerPort: 7007
           env:
