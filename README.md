@@ -69,30 +69,56 @@ yarn install && yarn dev
 ## Project Structure
 
 ```
-genai-golden-path-tutorial/
-├── README.md                    # This file
-├── docs/                        # Step-by-step documentation
-│   ├── 00-architecture.md       # Architecture diagrams (Mermaid)
-│   ├── 01-prerequisites.md      # GKE, Config Connector, Workload Identity
+backstage-gcp-goldenpath/
+├── README.md                        # This file
+├── CLAUDE.md                        # Project context for Claude Code
+├── LICENSE
+├── .env.example                     # Environment variable template
+├── .gitignore
+├── backstage/                       # Backstage application
+│   ├── app-config.yaml              # Main app configuration
+│   ├── app-config.local.yaml        # Local development config
+│   ├── app-config.production.yaml   # Production config
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── yarn.lock
+│   ├── packages/
+│   │   ├── app/                     # Frontend React app
+│   │   └── backend/                 # Backend Node.js app
+│   │       └── Dockerfile
+│   ├── examples/                    # Example entities and templates
+│   └── plugins/
+├── docs/                            # Step-by-step documentation
+│   ├── 00-architecture.md           # Architecture diagrams (Mermaid)
+│   ├── 01-prerequisites.md          # GKE, Config Connector, Workload Identity
 │   ├── 02-backstage-setup.md
 │   ├── 03-blueprint-creation.md
 │   ├── 04-template-creation.md
 │   ├── 05-registration-launch.md
-│   └── 06-deployment-strategy.md
-├── genai-platform/              # Backstage application
-│   └── packages/backend/templates/
-│       └── genai-gitlab-blueprint/
-│           ├── template.yaml    # Backstage template definition
-│           ├── catalog-info.yaml
-│           ├── Dockerfile
-│           ├── infra/
-│           │   ├── iam.yaml     # Service Account + IAM bindings
-│           │   ├── storage.yaml # GCS bucket (KRM)
-│           │   └── vertex.yaml  # Vertex AI API enablement
-│           └── src/
-│               ├── app.py       # Streamlit GenAI app
-│               └── requirements.txt
-└── scripts/                     # Helper scripts
-    ├── check-prerequisites.sh
-    └── setup-gke-config-connector.sh
+│   ├── 06-deployment-strategy.md
+│   └── 07-plugin-customization.md
+├── img/                             # Documentation images
+├── k8s/                             # Kubernetes manifests
+│   ├── argocd-appset.yaml
+│   ├── backstage.yaml
+│   ├── opa-gatekeeper.yaml
+│   └── secret.yaml
+├── scripts/                         # Helper scripts
+│   ├── build-and-push.sh            # Build & push Docker image to GHCR
+│   ├── check-prerequisites.sh
+│   └── setup-gke-config-connector.sh
+└── templates/                       # Backstage scaffolder templates
+    └── genai-gitlab-blueprint/
+        ├── template.yaml            # Backstage template definition
+        └── skeleton/
+            ├── .gitlab-ci.yml
+            ├── catalog-info.yaml
+            ├── infra/
+            │   ├── iam.yaml         # Service Account + IAM bindings
+            │   ├── storage.yaml     # GCS bucket (KRM)
+            │   └── vertex.yaml      # Vertex AI API enablement
+            └── src/
+                ├── Dockerfile
+                ├── app.py           # Streamlit GenAI app
+                └── requirements.txt
 ```
