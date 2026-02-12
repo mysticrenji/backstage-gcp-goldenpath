@@ -4,9 +4,9 @@ This document provides context about the GenAI Golden Path Tutorial project to h
 
 ## Project Overview
 
-**Purpose**: A tutorial that teaches how to build a self-service AI platform using Backstage and GitLab, implementing the "Golden Path" strategy for Data Scientists to provision secure, compliant GenAI environments with a single click.
+**Purpose**: A tutorial that teaches how to build a self-service AI platform using Backstage and GitLab, implementing the "Golden Path" strategy for AI engineers and data scientists to provision secure, compliant GenAI environments with a single click.
 
-**Target Users**: Platform Engineers and DevOps teams who want to enable Data Scientists with self-service infrastructure provisioning.
+**Target Users**: Platform Engineers and DevOps teams who want to enable AI engineers with self-service infrastructure provisioning.
 
 **Core Value Proposition**: Transforms infrastructure provisioning from manual, error-prone processes to declarative, automated workflows using GitOps principles.
 
@@ -145,6 +145,8 @@ A pre-paved, opinionated path for common tasks that:
 ```bash
 GCP_PROJECT_ID          # GCP project identifier
 GITLAB_TOKEN            # GitLab Personal Access Token (glpat-*)
+GITHUB_TOKEN            # GitHub Personal Access Token (for reading catalog templates)
+POSTGRES_PASSWORD       # PostgreSQL database password for Backstage
 ```
 
 ## Common Commands Reference
@@ -273,7 +275,7 @@ A successful implementation enables:
 | Resource creation stuck | Check Config Connector logs: `kubectl logs -n cnrm-system` |
 | Context not found | Verify cluster exists: `gcloud container clusters list` |
 | `publish:gitlab` InputError (allowedHosts/description) | Remove unsupported properties; use only `repoUrl`, `defaultBranch`, `repoVisibility` |
-| GitHub 401 reading template from catalog | Add `GITHUB_TOKEN` to `backstage-secrets` K8s secret and restart the pod |
+| GitHub 401 reading template from catalog | Ensure `GITHUB_TOKEN` exists in `backstage-secrets` K8s secret (`k8s/secret.yaml`) and restart the pod |
 
 ## Related Resources
 

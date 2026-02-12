@@ -161,14 +161,22 @@ docker push gcr.io/${GCP_PROJECT_ID}/backstage:latest
 kubectl create namespace backstage
 ```
 
-### Create the GitLab Token Secret
+### Create the Backstage Secrets
 
-Store your GitLab PAT as a Kubernetes secret:
+Backstage needs three secrets: the GitLab token (for creating repos via the scaffolder), the GitHub token (for reading templates from GitHub-hosted catalogs), and the PostgreSQL password (for the database).
 
 ```bash
 kubectl create secret generic backstage-secrets \
   --namespace backstage \
-  --from-literal=GITLAB_TOKEN=${GITLAB_TOKEN}
+  --from-literal=GITLAB_TOKEN=${GITLAB_TOKEN} \
+  --from-literal=GITHUB_TOKEN=${GITHUB_TOKEN} \
+  --from-literal=POSTGRES_PASSWORD=$(openssl rand -base64 20)
+```
+
+Alternatively, apply the declarative manifest from `k8s/secret.yaml` with `envsubst`:
+
+```bash
+envsubst < k8s/secret.yaml | kubectl apply -f -
 ```
 
 ### Create the PostgreSQL Database
@@ -242,17 +250,13 @@ spec:
       storage: 2Gi
 ```
 
-Create the PostgreSQL password secret and apply:
+Apply the PostgreSQL manifest:
 
 ```bash
-kubectl create secret generic backstage-secrets \
-  --namespace backstage \
-  --from-literal=GITLAB_TOKEN=${GITLAB_TOKEN} \
-  --from-literal=POSTGRES_PASSWORD=$(openssl rand -base64 20) \
-  --dry-run=client -o yaml | kubectl apply -f -
-
 kubectl apply -f k8s/postgres.yaml
 ```
+
+> **Note:** The `backstage-secrets` Secret (containing `GITLAB_TOKEN`, `GITHUB_TOKEN`, and `POSTGRES_PASSWORD`) should already exist from the earlier step. PostgreSQL reads `POSTGRES_PASSWORD` from it.
 
 ### Create the Backstage Deployment
 
@@ -286,6 +290,11 @@ spec:
                 secretKeyRef:
                   name: backstage-secrets
                   key: GITLAB_TOKEN
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: backstage-secrets
+                  key: GITHUB_TOKEN
             - name: POSTGRES_HOST
               value: postgres.backstage.svc.cluster.local
             - name: POSTGRES_PORT
@@ -461,10 +470,13 @@ Open http://localhost:7007 to verify Backstage is running in GKE.
 ```
 backstage namespace
 ├── backstage-sa          (ServiceAccount with Workload Identity)
-├── backstage-secrets     (Secret: GITLAB_TOKEN, POSTGRES_PASSWORD)
+├── backstage-secrets     (Secret: GITLAB_TOKEN, GITHUB_TOKEN, POSTGRES_PASSWORD)
 ├── postgres              (Deployment + Service + PVC)
 ├── backstage             (Deployment + Service)
 └── ingress (optional)    (External access)
+
+argocd namespace
+├── gitlab-repo-creds     (Secret: ArgoCD repo credentials for GitLab)
 ```
 
 ## Troubleshooting
@@ -502,8 +514,9 @@ PORT=3001 yarn dev
 kubectl logs -n backstage -l app=backstage --previous
 
 # Common causes:
-# 1. GITLAB_TOKEN secret missing - verify with:
+# 1. backstage-secrets missing or incomplete - verify with:
 kubectl get secret backstage-secrets -n backstage -o yaml
+# Ensure GITLAB_TOKEN, GITHUB_TOKEN, and POSTGRES_PASSWORD keys all exist
 
 # 2. PostgreSQL not ready - check:
 kubectl get pods -n backstage -l app=postgres

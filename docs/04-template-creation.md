@@ -143,9 +143,6 @@ spec:
       name: 🚀 Publishing to GitLab
       action: publish:gitlab
       input:
-        allowedHosts:
-          - gitlab.com
-        description: ${{ parameters.description }}
         repoUrl: gitlab.com?owner=${{ parameters.repoOwner }}&repo=${{ parameters.component_id }}
         defaultBranch: main
         repoVisibility: ${{ parameters.repoVisibility }}

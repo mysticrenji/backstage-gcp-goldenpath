@@ -4,7 +4,7 @@ Before starting this tutorial, ensure you have all required tools and infrastruc
 
 ## A. Local Development Tools
 
-### Node.js (v18 or v20 LTS)
+### Node.js (v22 or v24)
 
 ```bash
 # Check version
@@ -12,8 +12,8 @@ node --version
 
 # Install via nvm (recommended)
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-nvm install 20
-nvm use 20
+nvm install 22
+nvm use 22
 ```
 
 ### Yarn Package Manager

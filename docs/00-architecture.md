@@ -1,6 +1,6 @@
 # Architecture Overview
 
-This document describes the architecture of the GenAI Golden Path platform, showing how Backstage, GitLab, ArgoCD, and Google Cloud work together to provide a self-service developer experience.
+This document describes the architecture of the GenAI Golden Path platform, showing how Backstage, GitLab, ArgoCD, and Google Cloud work together to provide a self-service AI engineering experience.
 
 ## Table of Contents
 
@@ -13,15 +13,15 @@ This document describes the architecture of the GenAI Golden Path platform, show
 ## High-Level Architecture
 
 The platform follows a **GitOps** pattern where:
-1. Developers interact with Backstage UI (self-service portal)
+1. AI engineers interact with Backstage UI (self-service portal)
 2. Backstage generates code and pushes to GitLab (source of truth)
 3. ArgoCD syncs GitLab to Kubernetes (continuous deployment)
 4. Config Connector creates GCP resources (infrastructure as code)
 
 ```mermaid
 flowchart TB
-    subgraph User["👤 Developer Experience"]
-        U[Developer] --> |"1. Fills form"| BSU[Backstage UI]
+    subgraph User["👤 AI Engineer Experience"]
+        U[AI Engineer] --> |"1. Fills form"| BSU[Backstage UI]
         BSU --> |"Selects template"| TPL[GenAI Golden Path Template]
     end
 
@@ -104,7 +104,7 @@ flowchart TB
 
 | Step | Component | Action | Output |
 |------|-----------|--------|--------|
-| 1 | Developer | Fills Backstage form | Form data (component_id, project, etc.) |
+| 1 | AI Engineer | Fills Backstage form | Form data (component_id, project, etc.) |
 | 2 | Scaffolder | Processes template | Replaces `${{ values.* }}` placeholders |
 | 3 | Scaffolder | Generates files | Complete project structure |
 | 4 | GitLab Action | Creates repository | New repo with all files |
@@ -121,7 +121,7 @@ This diagram shows the temporal flow of events from developer action to resource
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Dev as 👤 Developer
+    participant Dev as 👤 AI Engineer
     participant BS as 🎭 Backstage
     participant GL as 🦊 GitLab
     participant Argo as 🔄 ArgoCD
@@ -292,7 +292,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A[Developer] -->|"Self-Service"| B[Backstage]
+    A[AI Engineer] -->|"Self-Service"| B[Backstage]
     B -->|"GitOps"| C[GitLab]
     C -->|"Continuous Sync"| D[ArgoCD]
     D -->|"Declarative Config"| E[GKE + Config Connector]

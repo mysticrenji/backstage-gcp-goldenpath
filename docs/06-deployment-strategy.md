@@ -151,10 +151,34 @@ kubectl apply -f argocd-application.yaml
 
 ### Step 5: Create ApplicationSet for Auto-Discovery
 
-#### Kuberenets secret creation                                                                                                  
-```bash                                                                                                                                        
-  kubectl create secret generic gitlab-token -n argocd --from-literal=token=$GITLAB_TOKEN    
+#### Create ArgoCD GitLab Credentials
+
+Apply the `gitlab-repo-creds` secret from `k8s/secret.yaml`, or create it manually:
+
+```bash
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-repo-creds
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repo-creds
+type: Opaque
+stringData:
+  type: git
+  url: https://gitlab.com/your-gitlab-group
+  username: oauth2
+  password: $GITLAB_TOKEN
+EOF
 ```
+
+Also create the `gitlab-token` secret referenced by the ApplicationSet's `tokenRef`:
+
+```bash
+kubectl create secret generic gitlab-token -n argocd --from-literal=token=$GITLAB_TOKEN
+```
+
 For automatic detection of new Golden Path repositories:
 
 ```yaml
@@ -200,7 +224,7 @@ spec:
 
 After setup, the complete flow works like this:
 
-1. **User Action**: Data Scientist fills form in Backstage
+1. **User Action**: AI Engineer fills form in Backstage
 2. **Backstage**: Creates repo in GitLab with IaC files
 3. **GitOps Agent**: Detects new repository
 4. **Kubernetes**: Agent applies `infra/*.yaml` manifests
@@ -284,7 +308,7 @@ This ensures all buckets created via the Golden Path have proper labels.
 
 You now have a complete self-service AI platform where:
 
-1. **Data Scientists** use Backstage UI to request resources
+1. **AI Engineers** use Backstage UI to request resources
 2. **GitLab** stores all infrastructure as code
 3. **GitOps** automatically deploys changes
 4. **Config Connector** provisions actual GCP resources
