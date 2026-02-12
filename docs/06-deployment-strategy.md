@@ -34,7 +34,7 @@ Create `.gitlab/agents/golden-path-agent/config.yaml`:
 gitops:
   manifest_projects:
     # Watch all projects in the group for infra/ directory
-    - id: your-gitlab-group
+    - id: <your-gitlab-group>
       default_namespace: default
       paths:
         - glob: '**/infra/*.yaml'
@@ -46,7 +46,7 @@ gitops:
 
 ci_access:
   groups:
-    - id: your-gitlab-group
+    - id: <your-gitlab-group>
 
 observability:
   logging:
@@ -167,7 +167,8 @@ metadata:
 type: Opaque
 stringData:
   type: git
-  url: https://gitlab.com/your-gitlab-group
+  # Must match the group in the ApplicationSet and the Backstage template's repoOwner
+  url: https://gitlab.com/<your-gitlab-group>
   username: oauth2
   password: $GITLAB_TOKEN
 EOF
@@ -192,7 +193,10 @@ spec:
   generators:
     - scmProvider:
         gitlab:
-          group: your-gitlab-group
+          # Replace with your GitLab group/namespace.
+          # This MUST match the "GitLab Group/User" (repoOwner) value
+          # that users enter in the Backstage template form.
+          group: <your-gitlab-group>
           includeSubgroups: true
           tokenRef:
             secretName: gitlab-token
@@ -219,6 +223,8 @@ spec:
         syncOptions:
           - CreateNamespace=true
 ```
+
+> **Important:** The `group` field in the ApplicationSet **must match** the GitLab group that users enter as the `repoOwner` parameter in the Backstage template. When a user creates a new project through Backstage and specifies their GitLab group (e.g., `my-team`), ArgoCD will only discover that repository if the ApplicationSet's `group` is set to `my-team` (or a parent group with `includeSubgroups: true`). Make sure to replace `<your-gitlab-group>` with the same value used in the Backstage template's `repoOwner` field, the `gitlab-repo-creds` secret URL, and the `gitlab-token` secret.
 
 ## Verification: End-to-End Flow
 

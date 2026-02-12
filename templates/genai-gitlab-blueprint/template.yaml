@@ -92,7 +92,7 @@ spec:
         repoOwner:
           title: GitLab Group/User
           type: string
-          description: The GitLab namespace where the repository will be created
+          description: The GitLab namespace where the repository will be created (must match the ArgoCD ApplicationSet group for auto-discovery)
         repoVisibility:
           title: Repository Visibility
           type: string

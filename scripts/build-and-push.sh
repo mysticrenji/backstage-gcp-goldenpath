@@ -5,7 +5,7 @@ set -euo pipefail
 GHCR_REGISTRY="ghcr.io"
 GHCR_OWNER="${GHCR_OWNER:-mysticrenji}"
 IMAGE_NAME="${IMAGE_NAME:-backstage}"
-IMAGE_TAG="v5"  #"${IMAGE_TAG:-$(git rev-parse --short HEAD)}"
+IMAGE_TAG="v6"  #"${IMAGE_TAG:-$(git rev-parse --short HEAD)}"
 FULL_IMAGE="${GHCR_REGISTRY}/${GHCR_OWNER}/${IMAGE_NAME}"
 BACKSTAGE_DIR="$(cd "$(dirname "$0")/../backstage" && pwd)"
 

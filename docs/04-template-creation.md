@@ -205,7 +205,7 @@ The `parameters` section defines the form fields users fill out:
 | `gcp_project_id` | string | GCP billing project |
 | `gcp_region` | enum | Dropdown of supported regions |
 | `environment` | enum | dev/staging/prod |
-| `repoOwner` | string | GitLab namespace |
+| `repoOwner` | string | GitLab namespace (must match the ArgoCD ApplicationSet `group` for auto-discovery) |
 
 ### Steps Section
 

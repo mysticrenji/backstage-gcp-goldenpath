@@ -1,35 +1,38 @@
-  apiVersion: argoproj.io/v1alpha1                                                                                                        
-  kind: ApplicationSet                                                                                                                    
-  metadata:                                                                                                                               
-    name: golden-path-apps                                                                                                                
-    namespace: argocd                                                                                                                     
-  spec:                                                                                                                                   
-    generators:                                                                                                                           
-      - scmProvider:                                                                                                                      
-          gitlab:                                                                                                                         
-            group: edgeworks-public                                                                                                            
-            includeSubgroups: true                                                                                                        
-            tokenRef:                                                                                                                     
-              secretName: gitlab-token                                                                                                    
-              key: token                                                                                                                  
-          filters:                                                                                                                        
-            - pathsExist:                                                                                                                 
-                - infra/storage.yaml                                                                                                      
-    template:                                                                                                                             
-      metadata:                                                                                                                           
-        name: '{{repository}}'                                                                                                            
-      spec:                                                                                                                               
-        project: default                                                                                                                  
-        source:                                                                                                                           
-          repoURL: '{{url}}'                                                                                                              
-          targetRevision: main                                                                                                            
-          path: infra                                                                                                                     
-        destination:                                                                                                                      
-          server: https://kubernetes.default.svc                                                                                          
-          namespace: '{{repository}}'                                                                                                     
-        syncPolicy:                                                                                                                       
-          automated:                                                                                                                      
-            prune: true                                                                                                                   
-            selfHeal: true                                                                                                                
-          syncOptions:                                                                                                                    
-            - CreateNamespace=true  
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: golden-path-apps
+  namespace: argocd
+spec:
+  generators:
+    - scmProvider:
+        gitlab:
+          # Replace with your GitLab group/namespace.
+          # This MUST match the "GitLab Group/User" (repoOwner) value
+          # that users enter in the Backstage template form.
+          group: <your-gitlab-group>
+          includeSubgroups: true
+          tokenRef:
+            secretName: gitlab-token
+            key: token
+        filters:
+          - pathsExist:
+              - infra/storage.yaml
+  template:
+    metadata:
+      name: '{{repository}}'
+    spec:
+      project: default
+      source:
+        repoURL: '{{url}}'
+        targetRevision: main
+        path: infra
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{repository}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
