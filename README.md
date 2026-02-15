@@ -2,6 +2,8 @@
 
 A step-by-step guide to building a self-service AI platform using Backstage and GitLab. This implements the "Golden Path" strategy where Data Scientists can click a button to provision secure, compliant GenAI environments.
 
+Complete guide is here on [Medium](https://medium.com/@renjithvr11/building-a-golden-path-for-genai-applications-fd9b1876811b)
+
 ## Architecture Overview
 
 For detailed architecture diagrams and component flows, see [docs/00-architecture.md](docs/00-architecture.md).
